@@ -13,7 +13,7 @@ fn setup(mut commands: Commands) {
         sprite: Sprite { color: (Color::rgb(1.0, 1.0, 1.0)), ..default()},
         transform: Transform { translation: (Vec3::new(0.0, 0.0, 0.0)), rotation: (Quat::from_axis_angle(Vec3::X, 0.0)), scale: (Vec3::splat(5.0)) },
         ..default()
-    }).insert(Body {});
+    }).insert(Body::default());
 
 }
 struct Vec2xf64 {
@@ -24,11 +24,14 @@ impl Vec2xf64 {
     fn new(first: f64, second: f64) -> Self {
         Vec2xf64 { x: first, y: second }s
     }
+    fn default() -> Self {
+        Vec2xf64 { x: 0.0f64, y: 0.0f64 }
+    }
 }
 
 impl Default for Body {
     fn default() -> Self {
-        Body { pos: (), vel: (), mass: () }
+        Body { pos: Vec2xf64::default(), vel: Vec2xf64::default(), mass: Vec2xf64::default()}
     }
 }
 struct Body {
