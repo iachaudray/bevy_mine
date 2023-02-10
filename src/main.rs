@@ -1,11 +1,19 @@
 use std::{ops::*};
-
+use rand::prelude::*;
 use bevy::{prelude::*, window::close_on_esc};
 
 const GRAVITATIONAL_CONSTANT: f64 = 1.0e-1f64;
 fn main() {
     println!("Hello, world!");
-    App::new().add_plugins(DefaultPlugins)
+    App::new().insert_resource(Counter {count: 1})
+    .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                width: 2500.0,
+                height: 1600.0,
+                title: String::from("Bodies"),
+                ..default()
+            },
+        ..default()}))
     .add_system(close_on_esc)
     .add_startup_system(setup)
     .add_system(step)
@@ -13,63 +21,75 @@ fn main() {
 }
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
+    rand::thread_rng().gen_range(0.0..10.0);
+    let mut Bodies = vec!(
+        Body { pos: Vec2xf64 {x: 50.0, y: 50.0}, vel: Vec2xf64 {x: 17.6, y:-13.0}, mass: 900.0 },
+        Body {pos: Vec2xf64 {x: 100.0, y: 100.0}, vel: Vec2xf64 { x:12.4, y:-6.0}, mass: 100.0},
+        Body {pos: Vec2xf64 {x: 0.0, y: 0.0}, vel: Vec2xf64 { x:0.0, y:0.0}, mass: 490000.0},
+        Body {pos: Vec2xf64 {x: -200.0, y: 200.0}, vel: Vec2xf64 { x:10.2, y:3.1}, mass: 15.0},
+        Body {pos: Vec2xf64 {x: -500.0, y: 300.0}, vel: Vec2xf64 { x:4.2, y:0.1}, mass: 15.0},
+        Body {pos: Vec2xf64 {x: -900.0, y: -300.0}, vel: Vec2xf64 { x:4.2, y:-2.9}, mass: 15.0},
+        Body {pos: Vec2xf64 {x: 200.0, y: 300.0}, vel: Vec2xf64 { x:2.2, y:-7.9}, mass: 1.0},
 
-    let Bodies = vec!(
-        Body {
-             pos: Vec2, 
-             vel: , 
-             mass:  }
-    )
+    );
+    for n in 200..210 {
+        for x in 200..230 {
 
-    commands.spawn(SpriteBundle {
-        sprite: Sprite { color: (Color::rgb(1.0, 1.0, 1.0)), ..default()},
-        transform: Transform { translation: (Vec3::new(0.0, 0.0, 0.0)), rotation: (Quat::from_axis_angle(Vec3::X, 0.0)), scale: (Vec3::splat(5.0)) },
-        ..default()
-    }).insert(Body::default());
-    commands.spawn(SpriteBundle {
-        sprite: Sprite { color: (Color::rgb(1.0, 1.0, 1.0)), ..default()},
-        transform: Transform { translation: (Vec3::new( body2_pos[0], body2_pos[1], 0.0)), rotation: (Quat::from_axis_angle(Vec3::X, 0.0)), scale: (Vec3::splat(5.0)) },
-        ..default()
-    }).insert(Body{
-        pos: Vec2xf64 { x: body2_pos[0] as f64, y: body2_pos[1] as f64 },
-        vel: Vec2xf64 { x:0.2f64, y: -1.3f64 },
-        mass: 100.0f64,
-    });
-    commands.spawn(SpriteBundle {
-        sprite: Sprite { color: (Color::rgb(1.0, 1.0, 1.0)), ..default()},
-        transform: Transform { translation: (Vec3::new(body3_pos[0], body3_pos[1], 0.0)), rotation: (Quat::from_axis_angle(Vec3::X, 0.0)), scale: (Vec3::splat(5.0)) },
-        ..default()
-    }).insert(Body{
-        pos: Vec2xf64 { x: body3_pos[0] as f64, y: body3_pos[1] as f64},
-        vel: Vec2xf64 { x:0.2f64, y: -0.3f64 },
-        mass: 200.0f64,
-    });
+        
+            Bodies.push(
+                Body { pos: (Vec2xf64 { x: (n - (thread_rng().gen_range(0..200))) as f64, y: (x - (thread_rng().gen_range(0..200))) as f64}), vel: Vec2xf64 { x:5.0, y: -10.0}, mass: thread_rng().gen_range(0.0..0.01) }
+            );
+    }
+    }
+    let colors = vec!("FF0000", "FF8000", "FFFF00", "AAFF00", "00FF00", "00FF80", "00FFFF", "0080FF");
+    let mut idx = 0;
+    for body in Bodies.iter() {
+
+        commands.spawn(SpriteBundle {
+            sprite: Sprite { color: (Color::hex(colors[idx]).unwrap()), ..default()},
+            transform: Transform { translation: Vec3 {x: body.pos.x as f32, y: body.pos.x as f32, z: 0.0}, rotation: Quat::from_axis_angle(Vec3::X, 0.0), scale: Vec3::splat(5.0)},
+            ..default()
+        }).insert(*body);
+        idx += 1;
+        if (idx > 7) {
+            idx = 0;
+        }
+    }
 
 }
 
-fn step(mut Bodies: Query<(&mut Body, &mut Transform)>) {
+fn step(mut Bodies: Query<(&mut Body, &mut Transform)>, mut timer: ResMut<Counter>) {
+    
     let mut iter = Bodies.iter_combinations_mut();
-    if let Some([(mut body1, mut transform1), (mut body2, mut transform2)]) = iter.fetch_next() {
+    while let Some([(mut body1, _transform1), (mut body2, _transform2)]) = iter.fetch_next() {
         let force = ((body1.mass * body2.mass) / body1.pos.distance_squared(body2.pos)) * GRAVITATIONAL_CONSTANT;
-        let mut direction = (body1.pos - body2.pos).normalize()*force;
+        let direction = (body1.pos - body2.pos).normalize()*force;
         let mut mass = body2.mass.clone();
+                
+        
 
-        body2.vel += direction/ mass; //force divide by mass
+        body2.vel += direction / mass; //force divide by mass
        
         mass = body1.mass.clone();
-        body1.vel += direction.negative()/mass;        
+        body1.vel += direction.negative()/mass; 
+         
     }
     for (mut body, mut transform) in Bodies.iter_mut() {
         body.pos.x += body.vel.x;
         body.pos.y += body.vel.y;
         transform.translation.x = body.pos.x as f32;
         transform.translation.y = body.pos.y as f32;
+
     }
+    
+    timer.count += 1;
 }
 
 
-
-
+#[derive(Resource)]
+struct Counter {
+    pub count: i32
+}
 
 
 
@@ -128,7 +148,7 @@ impl Default for Body {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 struct Body {
     pub pos: Vec2xf64,
     pub vel: Vec2xf64,
